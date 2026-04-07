@@ -111,8 +111,8 @@ void *malloc(size_t size)
         return NULL;
 
     /* Adjust block size to include overhead and alignment reqs. */
-    if (size <= DSIZE)
-        asize = 2*DSIZE;
+    if (size <= 2 * DSIZE)
+        asize = 3 * DSIZE;
     else
         asize = DSIZE * ((size + (DSIZE) + (DSIZE-1)) / DSIZE);
 
@@ -238,7 +238,7 @@ static void place(void *bp, size_t asize)
 
     delete_node(bp);
 
-    if ((csize - asize) >= (2*DSIZE)) {
+    if ((csize - asize) >= (3*DSIZE)) {
         PUT(HDRP(bp), PACK(asize, 1));
         PUT(FTRP(bp), PACK(asize, 1));
         bp = NEXT_BLKP(bp);
@@ -313,36 +313,16 @@ static void insert_node(void *bp, size_t size)
 {
     int list_idx = get_list_index(size);
     void *search_ptr = segregated_free_lists[list_idx];
-    void *insert_ptr = NULL;
-
-    while ((search_ptr != NULL) && (size > GET_SIZE(HDRP(search_ptr)))) {
-        insert_ptr = search_ptr;
-        search_ptr = SUCC(search_ptr);
-    }
 
     if (search_ptr != NULL) {
-        if (insert_ptr != NULL) {
-            SET_PTR(PRED_PTR(bp), insert_ptr);
-            SET_PTR(SUCC_PTR(bp), search_ptr);
-            SET_PTR(SUCC_PTR(insert_ptr), bp);
-            SET_PTR(PRED_PTR(search_ptr), bp);
-        } else {
-            SET_PTR(PRED_PTR(bp), NULL);
-            SET_PTR(SUCC_PTR(bp), search_ptr);
-            SET_PTR(PRED_PTR(search_ptr), bp);
-            segregated_free_lists[list_idx] = bp;
-        }
+        SET_PTR(PRED_PTR(bp), NULL);
+        SET_PTR(SUCC_PTR(bp), search_ptr);
+        SET_PTR(PRED_PTR(search_ptr), bp);
     } else {
-        if (insert_ptr != NULL) {
-            SET_PTR(PRED_PTR(bp), insert_ptr);
-            SET_PTR(SUCC_PTR(bp), NULL);
-            SET_PTR(SUCC_PTR(insert_ptr), bp);
-        } else {
-            SET_PTR(PRED_PTR(bp), NULL);
-            SET_PTR(SUCC_PTR(bp), NULL);
-            segregated_free_lists[list_idx] = bp;
-        }
+        SET_PTR(PRED_PTR(bp), NULL);
+        SET_PTR(SUCC_PTR(bp), NULL);
     }
+    segregated_free_lists[list_idx] = bp;
 }
 
 static void delete_node(void *bp)
